@@ -14,6 +14,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-sPWBmInFLTImTu}
       DB_NAME: ${DB_NAME:-IAC_2026_02_cleiton_souza}
       DB_DIALECT: ${DB_DIALECT:-mysql}
+      TMDB_API_KEY: ${TMDB_API_KEY:-2447590c450ee480b04ac592308b0f31}
+      TMDB_BASE_URL: ${TMDB_BASE_URL:-https://api.themoviedb.org/3}
     restart: unless-stopped
 
   frontend:
