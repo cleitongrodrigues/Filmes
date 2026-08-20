@@ -1,18 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const storePath = path.join(__dirname, '../../data/store.json');
-
-function loadStore() {
-  if (!fs.existsSync(storePath)) {
-    fs.writeFileSync(storePath, JSON.stringify({ users: [], favorites: [], comments: [] }, null, 2));
-  }
-  return JSON.parse(fs.readFileSync(storePath, 'utf8'));
-}
-
-function saveStore(data) {
-  fs.writeFileSync(storePath, JSON.stringify(data, null, 2));
-}
+const db = require('../config/database');
 
 exports.addFavorite = async (req, res) => {
   const { tmdb_movie_id, titulo, poster_path } = req.body;
@@ -22,49 +8,63 @@ exports.addFavorite = async (req, res) => {
     return res.status(400).json({ error: 'Dados do filme inválidos' });
   }
 
-  const store = loadStore();
-  const exists = store.favorites.some(
-    (favorite) => favorite.usuario_id === usuario_id && favorite.tmdb_movie_id === Number(tmdb_movie_id)
-  );
+  try {
+    const [rows] = await db.query(
+      'SELECT id FROM favoritos WHERE usuario_id = ? AND tmdb_movie_id = ?',
+      [usuario_id, Number(tmdb_movie_id)]
+    );
 
-  if (exists) {
-    return res.status(400).json({ error: 'Filme já favoritado' });
+    if (rows && rows.length > 0) {
+      return res.status(400).json({ error: 'Filme já favoritado' });
+    }
+
+    const result = await db.query(
+      'INSERT INTO favoritos (usuario_id, tmdb_movie_id, titulo, poster_path) VALUES (?, ?, ?, ?)',
+      [usuario_id, Number(tmdb_movie_id), titulo, poster_path || '']
+    );
+
+    return res.status(201).json({
+      id: result.insertId,
+      usuario_id,
+      tmdb_movie_id: Number(tmdb_movie_id),
+      titulo,
+      poster_path: poster_path || ''
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao adicionar favorito' });
   }
-
-  const favorite = {
-    id: Date.now(),
-    usuario_id,
-    tmdb_movie_id: Number(tmdb_movie_id),
-    titulo,
-    poster_path: poster_path || '',
-    criado_em: new Date().toISOString()
-  };
-
-  store.favorites.push(favorite);
-  saveStore(store);
-
-  return res.status(201).json(favorite);
 };
 
 exports.listFavorites = async (req, res) => {
-  const store = loadStore();
-  const favorites = store.favorites.filter((favorite) => favorite.usuario_id === req.user.id);
-  return res.json(favorites);
+  try {
+    const [rows] = await db.query(
+      'SELECT * FROM favoritos WHERE usuario_id = ? ORDER BY criado_em DESC',
+      [req.user.id]
+    );
+    return res.json(rows);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao listar favoritos' });
+  }
 };
 
 exports.removeFavorite = async (req, res) => {
   const { id } = req.params;
-  const store = loadStore();
-  const initialLength = store.favorites.length;
 
-  store.favorites = store.favorites.filter(
-    (favorite) => !(favorite.id === Number(id) && favorite.usuario_id === req.user.id)
-  );
+  try {
+    const result = await db.query(
+      'DELETE FROM favoritos WHERE id = ? AND usuario_id = ?',
+      [Number(id), req.user.id]
+    );
 
-  if (store.favorites.length === initialLength) {
-    return res.status(404).json({ error: 'Favorito não encontrado' });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Favorito não encontrado' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao remover favorito' });
   }
-
-  saveStore(store);
-  return res.json({ success: true });
 };

@@ -1,9 +1,10 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 
+const db = require('./src/config/database');
 const authController = require('./src/controllers/authController');
 const moviesController = require('./src/controllers/moviesController');
 const favoritesController = require('./src/controllers/favoritesController');
@@ -43,6 +44,17 @@ if (fs.existsSync(frontendDistPath)) {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor Cine Mágico rodando na porta ${PORT}`);
-});
+
+async function startServer() {
+  try {
+    await db.initDatabase();
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Servidor Cine Mágico rodando na porta ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Erro ao conectar com o banco de dados:', error.message);
+    process.exit(1);
+  }
+}
+
+startServer();

@@ -1,18 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const storePath = path.join(__dirname, '../../data/store.json');
-
-function loadStore() {
-  if (!fs.existsSync(storePath)) {
-    fs.writeFileSync(storePath, JSON.stringify({ users: [], favorites: [], comments: [] }, null, 2));
-  }
-  return JSON.parse(fs.readFileSync(storePath, 'utf8'));
-}
-
-function saveStore(data) {
-  fs.writeFileSync(storePath, JSON.stringify(data, null, 2));
-}
+const db = require('../config/database');
 
 exports.addComment = async (req, res) => {
   const { tmdb_movie_id, texto } = req.body;
@@ -22,39 +8,53 @@ exports.addComment = async (req, res) => {
     return res.status(400).json({ error: 'Comentário inválido' });
   }
 
-  const store = loadStore();
-  const comment = {
-    id: Date.now(),
-    usuario_id,
-    tmdb_movie_id: Number(tmdb_movie_id),
-    texto: texto.trim(),
-    criado_em: new Date().toISOString()
-  };
+  try {
+    const result = await db.query(
+      'INSERT INTO comentarios (usuario_id, tmdb_movie_id, texto) VALUES (?, ?, ?)',
+      [usuario_id, Number(tmdb_movie_id), texto.trim()]
+    );
 
-  store.comments.push(comment);
-  saveStore(store);
-  return res.status(201).json(comment);
+    return res.status(201).json({
+      id: result.insertId,
+      usuario_id,
+      tmdb_movie_id: Number(tmdb_movie_id),
+      texto: texto.trim()
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao adicionar comentário' });
+  }
 };
 
 exports.listComments = async (req, res) => {
-  const store = loadStore();
-  const comments = store.comments.filter((comment) => comment.usuario_id === req.user.id);
-  return res.json(comments);
+  try {
+    const [rows] = await db.query(
+      'SELECT * FROM comentarios WHERE usuario_id = ? ORDER BY criado_em DESC',
+      [req.user.id]
+    );
+    return res.json(rows);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao listar comentários' });
+  }
 };
 
 exports.removeComment = async (req, res) => {
   const { id } = req.params;
-  const store = loadStore();
-  const initialLength = store.comments.length;
 
-  store.comments = store.comments.filter(
-    (comment) => !(comment.id === Number(id) && comment.usuario_id === req.user.id)
-  );
+  try {
+    const result = await db.query(
+      'DELETE FROM comentarios WHERE id = ? AND usuario_id = ?',
+      [Number(id), req.user.id]
+    );
 
-  if (store.comments.length === initialLength) {
-    return res.status(404).json({ error: 'Comentário não encontrado' });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Comentário não encontrado' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Erro ao remover comentário' });
   }
-
-  saveStore(store);
-  return res.json({ success: true });
 };
