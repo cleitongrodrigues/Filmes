@@ -15,38 +15,61 @@ const Catalog = ({ user, onLogout, token }) => {
   };
 
   useEffect(() => {
+    if (!token) {
+      onLogout();
+      return;
+    }
+
     fetchMovies();
     fetchFavorites();
     fetchComments();
-  }, []);
+  }, [token]);
 
   const fetchMovies = async (query = '') => {
     try {
       const res = await fetch(`${API_URL}/movies${query ? `?q=${encodeURIComponent(query)}` : ''}`, { headers });
+      if (res.status === 401) {
+        onLogout();
+        return;
+      }
+
       const data = await res.json();
-      setMovies(data);
+      setMovies(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
+      setMovies([]);
     }
   };
 
   const fetchFavorites = async () => {
     try {
       const res = await fetch(`${API_URL}/favorites`, { headers });
+      if (res.status === 401) {
+        onLogout();
+        return;
+      }
+
       const data = await res.json();
-      setFavorites(data);
+      setFavorites(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
+      setFavorites([]);
     }
   };
 
   const fetchComments = async () => {
     try {
       const res = await fetch(`${API_URL}/comments`, { headers });
+      if (res.status === 401) {
+        onLogout();
+        return;
+      }
+
       const data = await res.json();
-      setComments(data);
+      setComments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
+      setComments([]);
     }
   };
 
@@ -99,9 +122,9 @@ const Catalog = ({ user, onLogout, token }) => {
     }
   };
 
-  const filteredMovies = movies.filter((movie) =>
-    movie.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredMovies = Array.isArray(movies)
+    ? movies.filter((movie) => movie.title.toLowerCase().includes(search.toLowerCase()))
+    : [];
 
   const displayMovies = activeTab === 'all'
     ? filteredMovies
