@@ -5,17 +5,15 @@ services:
     container_name: cine-magico-backend
     ports:
       - "3000:3000"
-    env_file:
-      - ./.env
     environment:
-      PORT: 3000
-      JWT_SECRET: ${JWT_SECRET}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      DB_DIALECT: ${DB_DIALECT}
+      PORT: ${PORT:-3000}
+      JWT_SECRET: ${JWT_SECRET:-troque_esta_chave_por_uma_mais_segura}
+      DB_HOST: ${DB_HOST:-35.226.64.52}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-IAC_2026_02_cleiton_souza}
+      DB_PASSWORD: ${DB_PASSWORD:-sPWBmInFLTImTu}
+      DB_NAME: ${DB_NAME:-IAC_2026_02_cleiton_souza}
+      DB_DIALECT: ${DB_DIALECT:-mysql}
     restart: unless-stopped
 
   frontend:
