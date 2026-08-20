@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: cine-magico-backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      JWT_SECRET: "troque-esta-chave-por-uma-mais-segura"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: cine-magico-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
