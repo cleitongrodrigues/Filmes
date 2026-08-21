@@ -18,7 +18,7 @@ exports.addFavorite = async (req, res) => {
       return res.status(400).json({ error: 'Filme já favoritado' });
     }
 
-    const result = await db.query(
+    const [result] = await db.query(
       'INSERT INTO favoritos (usuario_id, tmdb_movie_id, titulo, poster_path) VALUES (?, ?, ?, ?)',
       [usuario_id, Number(tmdb_movie_id), titulo, poster_path || '']
     );
@@ -53,7 +53,7 @@ exports.removeFavorite = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await db.query(
+    const [result] = await db.query(
       'DELETE FROM favoritos WHERE id = ? AND usuario_id = ?',
       [Number(id), req.user.id]
     );

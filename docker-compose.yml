@@ -6,16 +6,22 @@ services:
     ports:
       - "3000:3000"
     environment:
-      PORT: ${PORT:-3000}
-      JWT_SECRET: ${JWT_SECRET:-troque_esta_chave_por_uma_mais_segura}
-      DB_HOST: ${DB_HOST:-35.226.64.52}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_USER: ${DB_USER:-IAC_2026_02_cleiton_souza}
-      DB_PASSWORD: ${DB_PASSWORD:-sPWBmInFLTImTu}
-      DB_NAME: ${DB_NAME:-IAC_2026_02_cleiton_souza}
-      DB_DIALECT: ${DB_DIALECT:-mysql}
-      TMDB_API_KEY: ${TMDB_API_KEY:-2447590c450ee480b04ac592308b0f31}
-      TMDB_BASE_URL: ${TMDB_BASE_URL:-https://api.themoviedb.org/3}
+      PORT: ${PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_DIALECT: ${DB_DIALECT}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      TMDB_BASE_URL: ${TMDB_BASE_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
     restart: unless-stopped
 
   frontend:
@@ -25,5 +31,6 @@ services:
     ports:
       - "8201:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped

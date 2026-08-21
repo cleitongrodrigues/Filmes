@@ -9,7 +9,7 @@ exports.addComment = async (req, res) => {
   }
 
   try {
-    const result = await db.query(
+    const [result] = await db.query(
       'INSERT INTO comentarios (usuario_id, tmdb_movie_id, texto) VALUES (?, ?, ?)',
       [usuario_id, Number(tmdb_movie_id), texto.trim()]
     );
@@ -43,7 +43,7 @@ exports.removeComment = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await db.query(
+    const [result] = await db.query(
       'DELETE FROM comentarios WHERE id = ? AND usuario_id = ?',
       [Number(id), req.user.id]
     );

@@ -20,14 +20,15 @@ exports.register = async (req, res) => {
     }
 
     const senhaHash = await bcrypt.hash(senha, 10);
-    const result = await db.query(
+    const [result] = await db.query(
       'INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)',
       [nome, email, senhaHash]
     );
 
-    const token = generateToken(result.insertId);
+    const userId = result.insertId;
+    const token = generateToken(userId);
     return res.status(201).json({
-      user: { id: result.insertId, nome, email },
+      user: { id: userId, nome, email },
       token
     });
   } catch (error) {
