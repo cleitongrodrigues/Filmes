@@ -14,11 +14,28 @@ async function fetchTmdb(path) {
   return response.json();
 }
 
+async function getTomHanksMovies() {
+  const peopleData = await fetchTmdb(`/search/person?query=${encodeURIComponent('Tom Hanks')}&include_adult=false&language=pt-BR&page=1`);
+  const tomHanks = (peopleData.results || []).find((person) => person.name && person.name.toLowerCase() === 'tom hanks');
+
+  if (!tomHanks) {
+    return [];
+  }
+
+  const moviesData = await fetchTmdb(`/discover/movie?with_cast=${tomHanks.id}&sort_by=popularity.desc&include_adult=false&language=pt-BR&page=1`);
+  return moviesData.results || [];
+}
+
 exports.searchMovies = async (req, res) => {
   try {
     const { q } = req.query;
-    const endpoint = q ? `/search/movie?query=${encodeURIComponent(q)}&include_adult=false&language=pt-BR&page=1` : '/movie/popular?language=pt-BR&page=1';
-    const data = await fetchTmdb(endpoint);
+
+    let data;
+    if (q && String(q).trim()) {
+      data = await fetchTmdb(`/search/movie?query=${encodeURIComponent(q)}&include_adult=false&language=pt-BR&page=1`);
+    } else {
+      data = { results: await getTomHanksMovies() };
+    }
 
     const movies = (data.results || []).map((movie) => ({
       id: movie.id,

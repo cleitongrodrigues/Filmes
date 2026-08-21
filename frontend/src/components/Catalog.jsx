@@ -147,15 +147,15 @@ const Catalog = ({ user, onLogout, token }) => {
       <div className="catalog-container">
         <header className="hero-banner">
           <div>
-            <p className="eyebrow">Descubra histórias encantadas</p>
-            <h2>Filmes que parecem saídos de um conto de fadas.</h2>
+            <p className="eyebrow">Coleção com Tom Hanks</p>
+            <h2>Filmes favoritos do ator e suas grandes performances.</h2>
           </div>
           <div className="search-box">
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar filme..."
+              placeholder="Buscar filme por título..."
             />
           </div>
         </header>
