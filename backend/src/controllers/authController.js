@@ -1,68 +1,83 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const db = require('../config/database');
+const authServiceClient = require('../services/authServiceClient');
 
-function generateToken(userId) {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'secret', { expiresIn: 86400 });
-}
+module.exports = {
+  async register(req, res) {
+    try {
+      const { email, password } = req.body;
 
-exports.register = async (req, res) => {
-  const { nome, email, senha } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+      }
 
-  if (!nome || !email || !senha) {
-    return res.status(400).json({ error: 'Preencha todos os campos.' });
-  }
-
-  try {
-    const [rows] = await db.query('SELECT id FROM usuarios WHERE LOWER(email) = LOWER(?)', [email]);
-    if (rows && rows.length > 0) {
-      return res.status(400).json({ error: 'Usuário já existe' });
+      const result = await authServiceClient.register(email, password);
+      return res.status(201).json(result);
+    } catch (error) {
+      console.error('Register error:', error);
+      return res.status(error.status || 500).json(error);
     }
+  },
 
-    const senhaHash = await bcrypt.hash(senha, 10);
-    const [result] = await db.query(
-      'INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)',
-      [nome, email, senhaHash]
-    );
+  async login(req, res) {
+    try {
+      const { email, password } = req.body;
 
-    const userId = result.insertId;
-    const token = generateToken(userId);
-    return res.status(201).json({
-      user: { id: userId, nome, email },
-      token
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro ao registrar usuário' });
-  }
-};
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+      }
 
-exports.login = async (req, res) => {
-  const { email, senha } = req.body;
-
-  if (!email || !senha) {
-    return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
-  }
-
-  try {
-    const [rows] = await db.query('SELECT * FROM usuarios WHERE LOWER(email) = LOWER(?)', [email]);
-    if (!rows || rows.length === 0) {
-      return res.status(400).json({ error: 'Usuário não encontrado' });
+      const result = await authServiceClient.login(email, password);
+      return res.json(result);
+    } catch (error) {
+      console.error('Login error:', error);
+      return res.status(error.status || 500).json(error);
     }
+  },
 
-    const user = rows[0];
-    const validPassword = await bcrypt.compare(senha, user.senha_hash);
-    if (!validPassword) {
-      return res.status(400).json({ error: 'Senha inválida' });
+  async forgotPassword(req, res) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email é obrigatório' });
+      }
+
+      const result = await authServiceClient.forgotPassword(email);
+      return res.json(result);
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return res.status(error.status || 500).json(error);
     }
+  },
 
-    const token = generateToken(user.id);
-    return res.json({
-      user: { id: user.id, nome: user.nome, email: user.email },
-      token
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Erro no login' });
-  }
+  async resetPassword(req, res) {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ error: 'Token e senha são obrigatórios' });
+      }
+
+      const result = await authServiceClient.resetPassword(token, password);
+      return res.json(result);
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return res.status(error.status || 500).json(error);
+    }
+  },
+
+  async checkResetToken(req, res) {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({ error: 'Token é obrigatório' });
+      }
+
+      const result = await authServiceClient.checkResetToken(token);
+      return res.json(result);
+    } catch (error) {
+      console.error('Check reset token error:', error);
+      return res.status(error.status || 500).json(error);
+    }
+  },
 };

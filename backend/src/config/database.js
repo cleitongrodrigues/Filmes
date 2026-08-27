@@ -16,14 +16,6 @@ async function initDatabase() {
 
   try {
     await connection.query(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        nome VARCHAR(100) NOT NULL,
-        email VARCHAR(150) UNIQUE NOT NULL,
-        senha_hash VARCHAR(255) NOT NULL,
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
       CREATE TABLE IF NOT EXISTS favoritos (
         id INT AUTO_INCREMENT PRIMARY KEY,
         usuario_id INT NOT NULL,

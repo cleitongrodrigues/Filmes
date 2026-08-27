@@ -1,7 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import Auth from './components/Auth';
 import Catalog from './components/Catalog';
+import ResetPassword from './components/ResetPassword';
+
+function ResetPasswordRoute() {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const handleResetComplete = () => {
+    window.location.href = '/login';
+  };
+
+  return <ResetPassword token={token} onResetComplete={handleResetComplete} />;
+}
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem('token'));
@@ -28,6 +44,7 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
+          <Route path="/reset" element={<ResetPasswordRoute />} />
           <Route
             path="/login"
             element={!token ? <Auth onLogin={login} /> : <Navigate to="/" replace />}

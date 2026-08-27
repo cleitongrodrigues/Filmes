@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import ForgotPassword from './ForgotPassword';
 
 const API_URL = import.meta.env.DEV ? 'http://localhost:3000/api' : '/api';
 
 function Auth({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({ nome: '', email: '', senha: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,10 @@ function Auth({ onLogin }) {
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.senha
+        })
       });
 
       const data = await response.json();
@@ -37,6 +42,10 @@ function Auth({ onLogin }) {
       setLoading(false);
     }
   };
+
+  if (showForgotPassword) {
+    return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+  }
 
   return (
     <div className="auth-container">
@@ -94,6 +103,26 @@ function Auth({ onLogin }) {
             {loading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar conta'}
           </button>
         </form>
+
+        {isLogin && (
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            style={{
+              marginTop: '10px',
+              background: 'transparent',
+              border: 'none',
+              color: '#667eea',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              fontSize: '14px',
+              width: '100%',
+              textAlign: 'center',
+            }}
+          >
+            Esqueci minha senha
+          </button>
+        )}
 
         <div className="auth-toggle" onClick={() => setIsLogin(!isLogin)}>
           {isLogin ? 'Ainda não tem conta? Cadastre-se' : 'Já tem conta? Faça login'}

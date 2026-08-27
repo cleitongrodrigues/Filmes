@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
+const authServiceClient = require('../services/authServiceClient');
 
-module.exports = (req, res, next) => {
+module.exports = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -10,10 +10,15 @@ module.exports = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    req.user = decoded;
+    const result = await authServiceClient.verifyToken(token);
+    if (!result.valid) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+    
+    req.user = result.user;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Token inválido' });
+    console.error('Auth middleware error:', error);
+    return res.status(401).json({ error: 'Erro ao verificar token' });
   }
 };
