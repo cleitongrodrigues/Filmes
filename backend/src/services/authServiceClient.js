@@ -1,12 +1,12 @@
 const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
 
 module.exports = {
-  async register(email, password) {
+  async register(nome, email, password) {
     try {
       const response = await fetch(`${authServiceUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ nome, email, password }),
       });
 
       if (!response.ok) {

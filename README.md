@@ -7,8 +7,11 @@ Aplicação de catálogo de filmes com autenticação desacoplada, favoritos, co
 https://cleiton-souza-isw055.lapps.studio/login
 
 ## Desenvolvido por
+@cleitongrodrigues
 
-@siriani
+## Professor
+
+[github.com/siriani](https://github.com/siriani)
 
 ## Repositório
 
@@ -29,7 +32,7 @@ Desacoplamento da lógica de autenticação em um microsserviço separado, acess
 - ✅ Favoritar filmes por usuário
 - ✅ Adicionar e visualizar comentários
 - ✅ **Recuperação de senha com link expiável (30 minutos)** ✨ NOVO
-- ✅ Papéis de usuário (role) ✨ NOVO
+- ✅ Papéis de usuário (role) com RBAC no backend ✨ NOVO
 - ✅ Microsserviço de autenticação desacoplado ✨ NOVO
 - ✅ Persistência em banco MySQL/MariaDB
 - ✅ Execução em Docker com múltiplos containers
@@ -85,7 +88,56 @@ A partir da Atividade 3, a aplicação segue uma arquitetura de microsserviços:
 - ✅ Banco de dados compartilhado pelos dois serviços
 - ✅ Frontend continua vendo apenas o Backend (API pública)
 - ✅ Email de recuperação de senha com link que expira em 30 minutos
-- ✅ Cada usuário tem um role (papel) para controle de acesso futuro
+- ✅ Cada usuário tem um role (papel) para controle de acesso real no servidor
+
+## Controle de Acesso por Papel (RBAC)
+
+O projeto agora usa RBAC de verdade no backend. O cliente pode até esconder ou mostrar botões, mas a decisão final sempre acontece no servidor com base em `req.user.role`, preenchido após a validação do token pelo auth-service.
+
+### Permissões por papel
+
+**`usuario` pode:**
+- Fazer cadastro e login
+- Consultar o catálogo de filmes
+- Adicionar e remover favoritos próprios
+- Criar comentários
+- Listar os próprios comentários
+- Apagar apenas os próprios comentários
+
+**`admin` pode fazer tudo que `usuario` faz, e além disso:**
+- Apagar comentário de qualquer usuário (moderação)
+- Listar todos os comentários para identificar conteúdo a moderar
+
+### Ação exclusiva de admin implementada
+
+A ação exclusiva escolhida foi **moderação de comentários**.
+
+- `DELETE /api/comments/:id`
+- Se o comentário pertence ao usuário autenticado: exclusão permitida
+- Se o usuário autenticado tem `role = admin`: exclusão permitida, mesmo sendo comentário de outra pessoa
+- Se o comentário existe, mas o usuário comum tenta apagar comentário alheio: resposta `403 Forbidden`
+- Se o comentário não existe: resposta `404 Not Found`
+
+### Onde o enforcement acontece
+
+O enforcement está no backend, nunca no frontend.
+
+1. O backend recebe o token Bearer
+2. O middleware chama o auth-service em `/api/auth/verify-token`
+3. O auth-service valida o JWT e recarrega `id`, `email` e `role` atuais do banco
+4. O backend decide se a ação é permitida com base no usuário autenticado e no `role`
+
+Isso garante que mudar o papel de um usuário no banco passa a valer na próxima requisição, sem depender de esconder botões na interface.
+
+## Padrão de Arquitetura de Autorização
+
+### Padrão usado hoje: Padrão A, enforcement centralizado
+
+O projeto usa o **Padrão A**. O backend consulta o auth-service em toda rota protegida para validar o token e obter os dados atuais do usuário, incluindo a `role`. A autorização é decidida no servidor da aplicação, mas com a identidade confirmada por uma chamada de rede ao auth-service.
+
+### O que mudaria no Padrão B (claims no JWT)
+
+Se a aplicação migrasse para o **Padrão B**, o backend deixaria de consultar o auth-service a cada requisição e passaria a validar/decodificar o JWT localmente, lendo a `role` direto das claims do token. Isso reduziria a latência e o acoplamento de rede, mas uma mudança de papel não teria efeito imediato: o usuário continuaria com a role antiga até o token expirar e ser renovado.
 
 ## Rodar localmente
 
@@ -195,6 +247,50 @@ FRONTEND_URL=http://localhost:8201
 - O banco de dados é compartilhado entre backend e auth-service
 - Mudanças na lógica de autenticação não afetam o deploy do catálogo e vice-versa
 
+## Demonstração da Regra de Admin
+
+Para demonstrar o RBAC pedido na atividade, use dois logins diferentes: um com `role = usuario` e outro com `role = admin`.
+
+### Preparação
+
+1. Cadastre dois usuários normalmente.
+2. Promova um deles manualmente no banco:
+
+```sql
+UPDATE usuarios SET role = 'admin' WHERE email = 'admin@exemplo.com';
+```
+
+3. Faça login com o usuário comum e crie um comentário.
+4. Use o `id` desse comentário para repetir a mesma ação com os dois logins.
+
+### Resultado esperado
+
+**Usuário comum tentando apagar comentário de outro usuário:**
+
+```http
+DELETE /api/comments/:id
+Authorization: Bearer <token-do-usuario-comum>
+
+HTTP/1.1 403 Forbidden
+{
+       "error": "Permissão insuficiente"
+}
+```
+
+**Admin tentando apagar comentário de outro usuário:**
+
+```http
+DELETE /api/comments/:id
+Authorization: Bearer <token-do-admin>
+
+HTTP/1.1 200 OK
+{
+       "success": true
+}
+```
+
+Esses dois casos são os prints sugeridos para a entrega.
+
 ## Estrutura de Pastas
 
 ```
@@ -239,7 +335,6 @@ FRONTEND_URL=http://localhost:8201
 
 ## Próximas Melhorias
 
-- [ ] Implementar papéis de usuário com endpoints exclusivos (admin)
 - [ ] Adicionar confirmação de email para novos usuários
 - [ ] Implementar rate limiting no auth-service
 - [ ] Adicionar logs de auditoria de autenticação

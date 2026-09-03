@@ -25,6 +25,7 @@ function Auth({ onLogin }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          nome: formData.nome,
           email: formData.email,
           password: formData.senha
         })

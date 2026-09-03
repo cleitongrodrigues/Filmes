@@ -5,10 +5,10 @@ const db = require('../config/database');
 module.exports = {
   async register(req, res) {
     try {
-      const { email, password } = req.body;
+      const { nome, email, password } = req.body;
 
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+      if (!nome || !email || !password) {
+        return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
       }
 
       // Verificar se usuário já existe
@@ -22,8 +22,8 @@ module.exports = {
 
       // Inserir usuário
       await db.query(
-        'INSERT INTO usuarios (email, senha_hash, role) VALUES (?, ?, ?)',
-        [email, senhaHash, 'usuario']
+        'INSERT INTO usuarios (nome, email, senha_hash, role) VALUES (?, ?, ?, ?)',
+        [nome.trim(), email, senhaHash, 'usuario']
       );
 
       res.status(201).json({ message: 'Usuário cadastrado com sucesso' });

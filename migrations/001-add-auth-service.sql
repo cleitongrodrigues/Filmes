@@ -4,8 +4,9 @@
 -- 1. Criar tabela de usuários com role
 CREATE TABLE IF NOT EXISTS usuarios (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
-  senha VARCHAR(255) NOT NULL,
+  senha_hash VARCHAR(255) NOT NULL,
   role VARCHAR(50) DEFAULT 'usuario',
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_reset_tokens_usuario_id ON reset_tokens(usuario_i
 -- 4. Se a tabela usuarios já existia (da atividade anterior), adicionar coluna role se não existir
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'usuario';
 
--- 5. Se houver dados antigos de usuários, migrar para a nova estrutura (opcional, comentado)
--- Se você tem usuários da atividade anterior com nome e senha_hash, execute:
--- UPDATE usuarios SET email = CONCAT('user-', id, '@cinemagico.local'), senha = senha_hash WHERE email IS NULL;
+-- 5. Se a tabela antiga ainda tiver a coluna senha, crie senha_hash e migre os hashes:
+-- ALTER TABLE usuarios ADD COLUMN senha_hash VARCHAR(255) NULL;
+-- UPDATE usuarios SET senha_hash = senha WHERE senha_hash IS NULL AND senha IS NOT NULL;
+-- ALTER TABLE usuarios MODIFY COLUMN senha VARCHAR(255) NULL;

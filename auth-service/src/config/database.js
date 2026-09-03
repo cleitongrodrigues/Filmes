@@ -25,6 +25,7 @@ async function initDatabase() {
       await connection.query(`
         CREATE TABLE usuarios (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          nome VARCHAR(255) NOT NULL,
           email VARCHAR(255) UNIQUE NOT NULL,
           senha_hash VARCHAR(255) NOT NULL,
           role VARCHAR(50) DEFAULT 'usuario',
@@ -39,6 +40,23 @@ async function initDatabase() {
 
       if (roleColumns.length === 0) {
         await connection.query("ALTER TABLE usuarios ADD COLUMN role VARCHAR(50) DEFAULT 'usuario'");
+      }
+
+      const [passwordColumns] = await connection.query(
+        "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'usuarios' AND COLUMN_NAME IN ('senha', 'senha_hash')",
+        [process.env.DB_NAME || 'cine_magico']
+      );
+      const passwordColumnNames = passwordColumns.map((column) => column.COLUMN_NAME);
+
+      if (!passwordColumnNames.includes('senha_hash')) {
+        await connection.query("ALTER TABLE usuarios ADD COLUMN senha_hash VARCHAR(255) NULL");
+
+        if (passwordColumnNames.includes('senha')) {
+          await connection.query(
+            'UPDATE usuarios SET senha_hash = senha WHERE senha_hash IS NULL AND senha IS NOT NULL'
+          );
+          await connection.query("ALTER TABLE usuarios MODIFY COLUMN senha VARCHAR(255) NULL");
+        }
       }
     }
 

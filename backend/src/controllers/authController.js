@@ -3,13 +3,13 @@ const authServiceClient = require('../services/authServiceClient');
 module.exports = {
   async register(req, res) {
     try {
-      const { email, password } = req.body;
+      const { nome, email, password } = req.body;
 
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+      if (!nome || !email || !password) {
+        return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
       }
 
-      const result = await authServiceClient.register(email, password);
+      const result = await authServiceClient.register(nome, email, password);
       return res.status(201).json(result);
     } catch (error) {
       console.error('Register error:', error);
