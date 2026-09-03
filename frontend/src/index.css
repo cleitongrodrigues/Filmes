@@ -84,6 +84,35 @@ button, input {
   color: var(--muted);
 }
 
+.user-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.role-admin {
+  background: rgba(255, 140, 66, 0.18);
+  color: var(--primary);
+}
+
+.role-usuario {
+  background: rgba(217, 180, 255, 0.14);
+  color: var(--secondary);
+}
+
 .auth-container {
   min-height: 100vh;
   display: grid;
@@ -186,6 +215,11 @@ button, input {
   color: var(--danger);
   font-size: 0.9rem;
   text-align: center;
+}
+
+.catalog-error {
+  margin-top: -0.3rem;
+  margin-bottom: 1rem;
 }
 
 .catalog-page {
@@ -359,6 +393,20 @@ button, input {
   line-height: 1.4;
 }
 
+.comment-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.comment-author {
+  color: var(--secondary);
+  font-size: 0.72rem;
+  opacity: 0.9;
+  word-break: break-word;
+}
+
 .comment-item button {
   background: transparent;
   border: none;
@@ -385,6 +433,10 @@ button, input {
   .user-panel {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .user-summary {
+    align-items: flex-start;
   }
 
   .hero-banner {

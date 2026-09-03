@@ -7,6 +7,7 @@ const Catalog = ({ user, onLogout, token }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [commentInputs, setCommentInputs] = useState({});
   const [search, setSearch] = useState('');
+  const [commentFeedback, setCommentFeedback] = useState('');
 
   const API_URL = import.meta.env.DEV ? 'http://localhost:3000/api' : '/api';
   const headers = {
@@ -115,10 +116,23 @@ const Catalog = ({ user, onLogout, token }) => {
 
   const deleteComment = async (id) => {
     try {
-      await fetch(`${API_URL}/comments/${id}`, { method: 'DELETE', headers });
+      setCommentFeedback('');
+      const response = await fetch(`${API_URL}/comments/${id}`, { method: 'DELETE', headers });
+
+      if (response.status === 401) {
+        onLogout();
+        return;
+      }
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Não foi possível excluir o comentário');
+      }
+
       fetchComments();
     } catch (error) {
       console.error(error);
+      setCommentFeedback(error.message);
     }
   };
 
@@ -139,7 +153,12 @@ const Catalog = ({ user, onLogout, token }) => {
         </div>
 
         <div className="user-panel">
-          <span>Olá, {user?.nome}</span>
+          <div className="user-summary">
+            <span>Olá, {user?.email}</span>
+            <span className={`role-badge role-${user?.role || 'usuario'}`}>
+              {user?.role === 'admin' ? 'Admin' : 'Usuário'}
+            </span>
+          </div>
           <button className="btn btn-ghost" onClick={onLogout}>Sair</button>
         </div>
       </nav>
@@ -168,6 +187,8 @@ const Catalog = ({ user, onLogout, token }) => {
             Favoritos
           </button>
         </div>
+
+        {commentFeedback && <div className="error-message catalog-error">{commentFeedback}</div>}
 
         <div className="movies-grid">
           {displayMovies.map((movie) => {
@@ -217,7 +238,12 @@ const Catalog = ({ user, onLogout, token }) => {
                       {movieComments.length === 0 && <span className="empty-comments">Seja o primeiro a comentar.</span>}
                       {movieComments.map((comment) => (
                         <div key={comment.id} className="comment-item">
-                          <span>{comment.texto}</span>
+                          <div className="comment-content">
+                            <span>{comment.texto}</span>
+                            <span className="comment-author">
+                              {comment.autor_email || 'Autor desconhecido'}
+                            </span>
+                          </div>
                           <button onClick={() => deleteComment(comment.id)} aria-label="Excluir comentário">×</button>
                         </div>
                       ))}
