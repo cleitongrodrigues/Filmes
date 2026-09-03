@@ -28,10 +28,23 @@ exports.addComment = async (req, res) => {
 
 exports.listComments = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      'SELECT * FROM comentarios WHERE usuario_id = ? ORDER BY criado_em DESC',
-      [req.user.id]
-    );
+    const isAdmin = req.user.role === 'admin';
+    const [rows] = isAdmin
+      ? await db.query(
+          `SELECT comentarios.*, usuarios.email AS autor_email
+           FROM comentarios
+           INNER JOIN usuarios ON usuarios.id = comentarios.usuario_id
+           ORDER BY comentarios.criado_em DESC`
+        )
+      : await db.query(
+          `SELECT comentarios.*, usuarios.email AS autor_email
+           FROM comentarios
+           INNER JOIN usuarios ON usuarios.id = comentarios.usuario_id
+           WHERE comentarios.usuario_id = ?
+           ORDER BY comentarios.criado_em DESC`,
+          [req.user.id]
+        );
+
     return res.json(rows);
   } catch (error) {
     console.error(error);
@@ -43,10 +56,30 @@ exports.removeComment = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [result] = await db.query(
-      'DELETE FROM comentarios WHERE id = ? AND usuario_id = ?',
-      [Number(id), req.user.id]
+    const commentId = Number(id);
+
+    if (!Number.isInteger(commentId) || commentId <= 0) {
+      return res.status(400).json({ error: 'Comentário inválido' });
+    }
+
+    const [rows] = await db.query(
+      'SELECT id, usuario_id FROM comentarios WHERE id = ?',
+      [commentId]
     );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Comentário não encontrado' });
+    }
+
+    const comment = rows[0];
+    const isOwner = comment.usuario_id === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Permissão insuficiente' });
+    }
+
+    const [result] = await db.query('DELETE FROM comentarios WHERE id = ?', [commentId]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Comentário não encontrado' });
