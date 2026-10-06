@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 const Catalog = ({ user, onLogout, token }) => {
   const [movies, setMovies] = useState([]);
@@ -8,6 +9,7 @@ const Catalog = ({ user, onLogout, token }) => {
   const [commentInputs, setCommentInputs] = useState({});
   const [search, setSearch] = useState('');
   const [commentFeedback, setCommentFeedback] = useState('');
+  const [profileData, setProfileData] = useState(null);
 
   const API_URL = import.meta.env.DEV ? 'http://localhost:3000/api' : '/api';
   const headers = {
@@ -21,9 +23,17 @@ const Catalog = ({ user, onLogout, token }) => {
       return;
     }
 
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${API_URL}/profile`, { headers });
+        if (res.ok) setProfileData(await res.json());
+      } catch (err) {}
+    };
+
     fetchMovies();
     fetchFavorites();
     fetchComments();
+    fetchProfile();
   }, [token]);
 
   const fetchMovies = async (query = '') => {
@@ -153,12 +163,22 @@ const Catalog = ({ user, onLogout, token }) => {
         </div>
 
         <div className="user-panel">
-          <div className="user-summary">
-            <span>Olá, {user?.email}</span>
-            <span className={`role-badge role-${user?.role || 'usuario'}`}>
-              {user?.role === 'admin' ? 'Admin' : 'Usuário'}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="user-summary">
+              <span>Olá, {profileData?.nome || user?.email}</span>
+              <span className={`role-badge role-${user?.role || 'usuario'}`}>
+                {user?.role === 'admin' ? 'Admin' : 'Usuário'}
+              </span>
+            </div>
+            {profileData?.foto_url ? (
+              <img src={profileData.foto_url} alt="Avatar" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)', boxShadow: '0 0 10px rgba(247, 178, 103, 0.3)' }} />
+            ) : (
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'var(--primary)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', boxShadow: '0 0 10px rgba(247, 178, 103, 0.3)' }}>
+                {user?.email?.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
+          <Link to="/profile" className="btn btn-primary" style={{ marginRight: '10px' }}>Meu Perfil</Link>
           <button className="btn btn-ghost" onClick={onLogout}>Sair</button>
         </div>
       </nav>
