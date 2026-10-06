@@ -10,11 +10,26 @@ const moviesController = require('./src/controllers/moviesController');
 const favoritesController = require('./src/controllers/favoritesController');
 const commentsController = require('./src/controllers/commentsController');
 const logController = require('./src/controllers/logController');
+const profileController = require('./src/controllers/profileController');
 const authMiddleware = require('./src/middlewares/auth');
+const multer = require('multer');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Configuração do Multer (mantém arquivo em memória para jogar pro S3)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limite
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas imagens são permitidas'));
+    }
+  }
+});
 
 app.post('/api/auth/register', authController.register);
 app.post('/api/auth/login', authController.login);
@@ -23,6 +38,9 @@ app.post('/api/auth/reset-password', authController.resetPassword);
 app.get('/api/auth/reset/:token', authController.checkResetToken);
 
 app.use('/api/*', authMiddleware);
+
+app.get('/api/profile', profileController.getProfile);
+app.put('/api/profile', upload.single('foto'), profileController.updateProfile);
 
 app.get('/api/movies', moviesController.searchMovies);
 app.get('/api/movies/:id/details', moviesController.getMovieDetails);
