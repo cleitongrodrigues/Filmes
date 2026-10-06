@@ -22,8 +22,14 @@ Projeto público e organizado para execução local e em container.
 ### Atividade 2 - Catálogo de Filmes (Monólito)
 Implementação de uma aplicação monolítica com login, cadastro, catálogo de filmes, favoritos e comentários em um único container.
 
-### Atividade 3 - Microsserviço de Autenticação ✨ NOVO
+### Atividade 3 - Microsserviço de Autenticação
 Desacoplamento da lógica de autenticação em um microsserviço separado, acessível apenas internamente via Docker network.
+
+### Atividade 4 - Controle de Acesso por Papel (RBAC)
+Implementação de papéis de usuário (`usuario` e `admin`) com verificação real no servidor para ações exclusivas como moderação de comentários.
+
+### Atividade 5 - Logs e Auditoria ✨ NOVO
+Criação do microsserviço `log-service` que recebe eventos do sistema e os persiste utilizando Redis Streams, com rota exclusiva de auditoria para administradores.
 
 ## Funcionalidades
 
@@ -31,9 +37,10 @@ Desacoplamento da lógica de autenticação em um microsserviço separado, acess
 - ✅ Catálogo de filmes com dados da TMDB
 - ✅ Favoritar filmes por usuário
 - ✅ Adicionar e visualizar comentários
-- ✅ **Recuperação de senha com link expiável (30 minutos)** ✨ NOVO
-- ✅ Papéis de usuário (role) com RBAC no backend ✨ NOVO
-- ✅ Microsserviço de autenticação desacoplado ✨ NOVO
+- ✅ **Recuperação de senha com link expiável (30 minutos)**
+- ✅ Papéis de usuário (role) com RBAC no backend
+- ✅ Microsserviço de autenticação desacoplado
+- ✅ **Logs e Auditoria via microsserviço dedicado e Redis** ✨ NOVO
 - ✅ Persistência em banco MySQL/MariaDB
 - ✅ Execução em Docker com múltiplos containers
 
@@ -41,44 +48,40 @@ Desacoplamento da lógica de autenticação em um microsserviço separado, acess
 
 - Frontend: React + Vite
 - Backend: Node.js + Express (API Catalog)
-- Auth Service: Node.js + Express (Microsserviço de Autenticação) ✨ NOVO
+- Auth Service: Node.js + Express (Microsserviço de Autenticação)
+- Log Service: Node.js + Express (Microsserviço de Logs) ✨ NOVO
 - Banco: MySQL/MariaDB (compartilhado)
-- Email: Mailtrap (Desenvolvimento) / Brevo (Produção) ✨ NOVO
+- Cache/Auditoria: Redis ✨ NOVO
+- Email: Mailtrap (Desenvolvimento) / Brevo (Produção)
 - Containerização: Docker + Docker Compose
 
 ## Arquitetura
 
 A partir da Atividade 3, a aplicação segue uma arquitetura de microsserviços:
 
-```
+```text
 ┌─────────────┐
 │   Frontend  │ (porta 8201 - público)
 │   React     │
 └─────────────┘
        ↓ HTTPS (public)
-┌──────────────────────────────────────────────┐
-│  Backend Cine Mágico (porta 3000 - público)  │
-│  ├─ Login/Logout (proxy para auth-service)   │
-│  ├─ Catálogo de filmes                       │
-│  ├─ Favoritos                                │
-│  └─ Comentários                              │
+┌──────────────────────────────────────────────┐          ┌─────────────────────────┐
+│  Backend Cine Mágico (porta 3000 - público)  │ ───────> │  Log Service (porta 3002)│ ✨ NOVO
+│  ├─ Login/Logout (proxy)                     │          │  (Apenas interno)       │
+│  ├─ Catálogo, Favoritos, Comentários         │          │  ├─ Recebe eventos      │
+│  └─ Consulta de Logs (proxy para admin)      │ <─────── │  └─ Consulta de logs    │
+└──────────────────────────────────────────────┘          └─────────────────────────┘
+       ↓ HTTP (rede interna Docker)                            ↓ Gravação via XADD
+┌──────────────────────────────────────────────┐          ┌─────────────────────────┐
+│  Auth Service (porta 3001 - INTERNO APENAS)  │ ───────> │  Redis (porta 6379)     │ ✨ NOVO
+│  ├─ Cadastro, Login, Validação JWT           │          │  └─ Redis Streams       │
+│  └─ Controle de Senha e Roles                │          └─────────────────────────┘
 └──────────────────────────────────────────────┘
-       ↓ HTTP (rede interna Docker)
-┌────────────────────────────────────────────────────────┐
-│  Auth Service (porta 3001 - INTERNA APENAS)            │
-│  ├─ Cadastro e autenticação                           │
-│  ├─ Validação de tokens JWT                           │
-│  ├─ Recuperação de senha com link expiável            │
-│  ├─ Papéis de usuário (role)                          │
-│  └─ Integração com Mailtrap/Brevo                     │
-└────────────────────────────────────────────────────────┘
        ↓ TCP (rede interna Docker)
 ┌────────────────────────────────┐
-│  MariaDB                        │
-│  ├─ Tabela: usuarios            │
-│  ├─ Tabela: reset_tokens        │
-│  ├─ Tabela: favoritos           │
-│  └─ Tabela: comentarios         │
+│  MariaDB                       │
+│  ├─ usuarios, reset_tokens     │
+│  └─ favoritos, comentarios     │
 └────────────────────────────────┘
 ```
 
@@ -89,6 +92,7 @@ A partir da Atividade 3, a aplicação segue uma arquitetura de microsserviços:
 - ✅ Frontend continua vendo apenas o Backend (API pública)
 - ✅ Email de recuperação de senha com link que expira em 30 minutos
 - ✅ Cada usuário tem um role (papel) para controle de acesso real no servidor
+- ✅ Gravação e Consulta de Logs de Auditoria usando Redis Streams ✨ NOVO
 
 ## Controle de Acesso por Papel (RBAC)
 
@@ -138,6 +142,14 @@ O projeto usa o **Padrão A**. O backend consulta o auth-service em toda rota pr
 ### O que mudaria no Padrão B (claims no JWT)
 
 Se a aplicação migrasse para o **Padrão B**, o backend deixaria de consultar o auth-service a cada requisição e passaria a validar/decodificar o JWT localmente, lendo a `role` direto das claims do token. Isso reduziria a latência e o acoplamento de rede, mas uma mudança de papel não teria efeito imediato: o usuário continuaria com a role antiga até o token expirar e ser renovado.
+
+## Logs e Auditoria (Atividade 5)
+
+Toda ação relevante (login, favoritar, comentar, moderação, e qualquer tentativa negada 403) é enviada via API interna para o `log-service`. 
+
+O `log-service` utiliza o comando `XADD` do **Redis Streams** para armazenar os eventos ordenados no tempo, o que garante excelente performance de escrita.
+
+Apenas usuários com `role = admin` podem consultar a rota `GET /api/logs` no catálogo para visualizar esse rastro de auditoria. Qualquer tentativa de um usuário comum resulta em um erro `403` e em um evento de tentativa negada no histórico.
 
 ## Rodar localmente
 
@@ -311,6 +323,11 @@ Esses dois casos são os prints sugeridos para a entrega.
 │   │   ├── middlewares/
 │   │   ├── services/emailService.js
 │   │   └── models/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── server.js
+│
+├── log-service/                   # ✨ NOVO - Microsserviço de Logs
 │   ├── Dockerfile
 │   ├── package.json
 │   └── server.js
