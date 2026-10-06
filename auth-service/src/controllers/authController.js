@@ -62,6 +62,8 @@ module.exports = {
         { expiresIn: '24h' }
       );
 
+      require('../services/logServiceClient').sendLog(usuario.id, 'login', { email: usuario.email });
+
       res.json({ token, user: { id: usuario.id, email: usuario.email, role: usuario.role } });
     } catch (error) {
       console.error('Login error:', error);

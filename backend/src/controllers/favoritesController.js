@@ -23,6 +23,8 @@ exports.addFavorite = async (req, res) => {
       [usuario_id, Number(tmdb_movie_id), titulo, poster_path || '']
     );
 
+    require('../services/logServiceClient').sendLog(usuario_id, 'favoritar', { tmdb_movie_id: Number(tmdb_movie_id), titulo });
+
     return res.status(201).json({
       id: result.insertId,
       usuario_id,

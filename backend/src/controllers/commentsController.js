@@ -14,6 +14,8 @@ exports.addComment = async (req, res) => {
       [usuario_id, Number(tmdb_movie_id), texto.trim()]
     );
 
+    require('../services/logServiceClient').sendLog(usuario_id, 'comentar', { tmdb_movie_id: Number(tmdb_movie_id), comment_id: result.insertId });
+
     return res.status(201).json({
       id: result.insertId,
       usuario_id,
@@ -76,6 +78,7 @@ exports.removeComment = async (req, res) => {
     const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
+      require('../services/logServiceClient').sendLog(req.user.id, 'tentativa_moderacao_negada', { comment_id: commentId });
       return res.status(403).json({ error: 'Permissão insuficiente' });
     }
 
@@ -84,6 +87,8 @@ exports.removeComment = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Comentário não encontrado' });
     }
+
+    require('../services/logServiceClient').sendLog(req.user.id, 'apagar_comentario', { comment_id: commentId, type: isAdmin && !isOwner ? 'moderacao' : 'proprio' });
 
     return res.json({ success: true });
   } catch (error) {
