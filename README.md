@@ -28,8 +28,11 @@ Desacoplamento da lógica de autenticação em um microsserviço separado, acess
 ### Atividade 4 - Controle de Acesso por Papel (RBAC)
 Implementação de papéis de usuário (`usuario` e `admin`) com verificação real no servidor para ações exclusivas como moderação de comentários.
 
-### Atividade 5 - Logs e Auditoria ✨ NOVO
+### Atividade 5 - Logs e Auditoria
 Criação do microsserviço `log-service` que recebe eventos do sistema e os persiste utilizando Redis Streams, com rota exclusiva de auditoria para administradores.
+
+### Atividade 6 - Upload e Perfil de Usuário ✨ NOVO
+Transformação do catálogo numa rede social. Adição de páginas de perfil dos usuários com suporte a bio, visualização de favoritos e upload de foto de perfil via Object Storage (MinIO) compatível com S3.
 
 ## Funcionalidades
 
@@ -40,7 +43,9 @@ Criação do microsserviço `log-service` que recebe eventos do sistema e os per
 - ✅ **Recuperação de senha com link expiável (30 minutos)**
 - ✅ Papéis de usuário (role) com RBAC no backend
 - ✅ Microsserviço de autenticação desacoplado
-- ✅ **Logs e Auditoria via microsserviço dedicado e Redis** ✨ NOVO
+- ✅ Logs e Auditoria via microsserviço dedicado e Redis
+- ✅ **Upload de Fotos de Perfil integradas a Object Storage (MinIO)** ✨ NOVO
+- ✅ **Página de Perfil exibindo bio, foto temporária e favoritos** ✨ NOVO
 - ✅ Persistência em banco MySQL/MariaDB
 - ✅ Execução em Docker com múltiplos containers
 
@@ -150,6 +155,20 @@ Toda ação relevante (login, favoritar, comentar, moderação, e qualquer tenta
 O `log-service` utiliza o comando `XADD` do **Redis Streams** para armazenar os eventos ordenados no tempo, o que garante excelente performance de escrita.
 
 Apenas usuários com `role = admin` podem consultar a rota `GET /api/logs` no catálogo para visualizar esse rastro de auditoria. Qualquer tentativa de um usuário comum resulta em um erro `403` e em um evento de tentativa negada no histórico.
+
+## Upload e Storage de Arquivos (Atividade 6)
+
+Em vez de armazenarmos as fotos de perfil no banco de dados como binários (o que causaria lentidão, backups grandes e não é escalável), utilizamos um **Object Storage (MinIO)** dedicado.
+
+No banco de dados (MariaDB/MySQL), foi adicionada as colunas `bio` e a coluna `foto_perfil` que salva **apenas a referência** do nome do arquivo dentro do Bucket (ex: `users/12/profile-17253...jpg`).
+
+### Decisão de Arquitetura: URL Pré-assinada vs Leitura Pública
+
+Para a exibição da foto de volta aos usuários (Requisito 3), foi decidido utilizar **URLs pré-assinadas (Temporárias)**.
+- **Como funciona:** O bucket do MinIO permanece totalmente fechado. Sempre que um usuário solicita seu perfil via `GET /api/profile`, o backend se comunica com o MinIO e gera um link assinado dinamicamente, que é válido por apenas 1 hora, devolvendo essa URL para o frontend exibir a imagem.
+- **Trade-off escolhido:** Embora abrir o bucket para "leitura pública" fosse mais simples de implementar e mais fácil para o cache no navegador, o uso de URLs assinadas traz muito mais **segurança e controle**. Ninguém consegue acessar ou varrer a lista de arquivos de perfil dos usuários por fora do sistema, pois cada visualização requer uma credencial temporária explícita assinada pelo backend.
+
+O endpoint `PUT /api/profile` valida severamente se o arquivo possui a extensão de imagem correta e limita o upload a **5MB**. Além disso, o sistema confere a identidade atrelada estritamente ao token JWT para permitir alterações. Portanto, é impossível editar ou sobrepor a foto de perfil de outro usuário.
 
 ## Rodar localmente
 
